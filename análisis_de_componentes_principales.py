@@ -248,19 +248,18 @@ class AppPCA(tk.Tk):
         # --- NUEVO: Contenedor scrollable para checkboxes ---
         container_frame = tk.Frame(self.sidebar_frame, bg=self.TEXT_BG)
         container_frame.pack(fill="both", expand=True, padx=5, pady=5)
-        
         container_frame.config(highlightbackground=self.BTN_COLOR, highlightthickness=1)
 
         self.canvas_sidebar = tk.Canvas(container_frame, bg=self.TEXT_BG, highlightthickness=0)
         scrollbar_sidebar = tk.Scrollbar(container_frame, orient="vertical", command=self.canvas_sidebar.yview)
-        
-        # Este es el frame que contendrá los checkboxes, DENTRO del canvas
-        self.checkbox_container = tk.Frame(self.canvas_sidebar, bg=self.TEXT_BG)
 
         self.canvas_sidebar.configure(yscrollcommand=scrollbar_sidebar.set)
 
-        self.canvas_sidebar.pack(side="left", fill="both", expand=True)
         scrollbar_sidebar.pack(side="right", fill="y")
+        self.canvas_sidebar.pack(side="left", fill="both", expand=True)
+        
+         # Este es el frame que contendrá los checkboxes, DENTRO del canvas
+        self.checkbox_container = tk.Frame(self.canvas_sidebar, bg=self.TEXT_BG)
         
         self.canvas_sidebar.create_window((0, 0), window=self.checkbox_container, anchor="nw")
         
