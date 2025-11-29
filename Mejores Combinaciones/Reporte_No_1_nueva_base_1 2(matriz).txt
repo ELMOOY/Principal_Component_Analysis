@@ -1,0 +1,37 @@
+Analizando combinaciones posibles desde 10 variables base...
+------------------------------------------------------------
+
+Mejores 2 Variables:
+Retención (PC1): 99.89%
+Variables: radius (nucA), perimeter (nucA)
+
+Mejores 3 Variables:
+Retención (PC1): 99.37%
+Variables: radius (nucA), perimeter (nucA), area (nucA)
+
+Mejores 4 Variables:
+Retención (PC1): 93.49%
+Variables: radius (nucA), perimeter (nucA), area (nucA), concave points (nucA)
+
+Mejores 5 Variables:
+Retención (PC1): 87.95%
+Variables: radius (nucA), perimeter (nucA), area (nucA), concavity (nucA), concave points (nucA)
+
+Mejores 6 Variables:
+Retención (PC1): 82.27%
+Variables: radius (nucA), perimeter (nucA), area (nucA), compactness (nucA), concavity (nucA), concave points (nucA)
+
+Mejores 7 Variables:
+Retención (PC1): 73.44%
+Variables: radius (nucA), perimeter (nucA), area (nucA), smoothness (nucA), compactness (nucA), concavity (nucA), concave points (nucA)
+
+Mejores 8 Variables:
+Retención (PC1): 66.80%
+Variables: radius (nucA), perimeter (nucA), area (nucA), smoothness (nucA), compactness (nucA), concavity (nucA), concave points (nucA), symmetry (nucA)
+
+Mejores 9 Variables:
+Retención (PC1): 60.63%
+Variables: radius (nucA), texture (nucA), perimeter (nucA), area (nucA), smoothness (nucA), compactness (nucA), concavity (nucA), concave points (nucA), symmetry (nucA)
+
+============================================================
+Análisis Finalizado.
