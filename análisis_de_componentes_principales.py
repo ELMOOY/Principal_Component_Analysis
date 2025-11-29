@@ -3,18 +3,11 @@ from tkinter import scrolledtext, messagebox, font, filedialog
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
+from itertools import combinations
 import numpy as np
-import os # <-- 1. AÑADIR IMPORT OS
-
-# --- CONSTANTE ELIMINADA ---
-# Ya no necesitamos INDICES_COLUMNAS, ahora será dinámico.
+import os 
 
 class AppPCA(tk.Tk):
-    """
-    Una aplicación de Tkinter para realizar Análisis de Componentes Principales (PCA)
-    en un archivo CSV seleccionado por el usuario, con una estética morada y minimalista.
-    AHORA incluye un panel lateral para seleccionar variables dinámicamente.
-    """
 
     def __init__(self):
         super().__init__()
@@ -217,6 +210,22 @@ class AppPCA(tk.Tk):
                                  state=tk.DISABLED) # Inicia deshabilitado
         self.btn_analyze.pack(side="left", padx=10)
 
+        # --- NUEVO BOTÓN: Buscador de Combinaciones ---
+        self.btn_combinations = tk.Button(button_bar_frame,
+                                         text="🔍 Buscar Mejores Combinaciones",
+                                         font=self.BUTTON_FONT,
+                                         bg="#FF9800", # Naranja para diferenciar
+                                         fg=self.FG_COLOR,
+                                         activebackground="#F57C00",
+                                         activeforeground=self.FG_COLOR,
+                                         command=self.abrir_ventana_combinaciones,
+                                         relief=tk.FLAT,
+                                         padx=15,
+                                         pady=10,
+                                         bd=0,
+                                         state=tk.DISABLED) # Inicia deshabilitado
+        self.btn_combinations.pack(side="left", padx=10)
+
 
         # --- Botón para Guardar Datos ---
         self.btn_guardar_pca = tk.Button(button_bar_frame,
@@ -339,6 +348,7 @@ class AppPCA(tk.Tk):
             self.btn_ver_matriz.config(state=tk.DISABLED)
             self.btn_ver_pca_matriz.config(state=tk.DISABLED)
             self.btn_guardar_pca.config(state=tk.DISABLED)
+            self.btn_combinations.config(state=tk.NORMAL)
 
         except Exception as e:
             messagebox.showerror("Error al leer CSV", f"No se pudo leer el archivo CSV:\n{e}")
@@ -734,6 +744,175 @@ class AppPCA(tk.Tk):
         win_matriz.transient(self)
         win_matriz.grab_set()
         self.wait_window(win_matriz)
+
+    # --- NUEVOS MÉTODOS PARA COMBINACIONES ---
+    def abrir_ventana_combinaciones(self):
+        """Abre una ventana emergente y calcula las mejores combinaciones."""
+        if self.data_raw is None:
+            return
+
+        # Crear ventana
+        win_combo = tk.Toplevel(self)
+        win_combo.title("Mejores Combinaciones de Variables")
+        win_combo.geometry("800x600")
+        win_combo.configure(bg=self.BG_COLOR)
+
+        # Título
+        tk.Label(win_combo, text="Análisis de Retención de Información (Mejores Combinaciones)", 
+                 font=self.TITLE_FONT, bg=self.BG_COLOR, fg=self.FG_COLOR).pack(pady=10)
+
+        # Área de texto
+        txt_combo = scrolledtext.ScrolledText(win_combo, wrap=tk.WORD, font=self.RESULT_FONT,
+                                              bg=self.TEXT_BG, fg=self.FG_COLOR, relief=tk.FLAT)
+        txt_combo.pack(fill="both", expand=True, padx=20, pady=10)
+        
+        # Configurar tags de color
+        txt_combo.tag_config('header', font=self.FINAL_FONT, foreground="#FF9800") # Naranja
+        txt_combo.tag_config('var_list', foreground="#4CAF50") # Verde
+
+        # --- Frame para los botones (Cerrar y Descargar) ---
+        btn_frame = tk.Frame(win_combo, bg=self.BG_COLOR)
+        btn_frame.pack(pady=10)
+
+        # Botón Descargar Reporte
+        tk.Button(btn_frame, text="Descargar Informe (.txt)", font=self.BUTTON_FONT, 
+                  bg="#2196F3", fg=self.FG_COLOR, # Azul
+                  activebackground="#1976D2", activeforeground=self.FG_COLOR,
+                  command=lambda: self.descargar_reporte(txt_combo), 
+                  relief=tk.FLAT).pack(side="left", padx=10)
+
+        # Botón Cerrar
+        tk.Button(btn_frame, text="Cerrar", font=self.BUTTON_FONT, 
+                  bg=self.BTN_EXIT_BG, fg=self.FG_COLOR,
+                  command=win_combo.destroy, relief=tk.FLAT).pack(side="left", padx=10)
+
+        # Ejecutar cálculo
+        self.after(100, lambda: self.calcular_mejores_combinaciones(txt_combo))
+        
+    def descargar_reporte(self, text_widget):
+        """Guarda el contenido del widget de texto en un archivo .txt automáticamente."""
+        content = text_widget.get("1.0", tk.END).strip()
+        
+        if not content or "Calculando..." in content:
+            messagebox.showwarning("Espera", "Espera a que termine el cálculo antes de descargar.")
+            return
+
+        folder_name = "Mejores Combinaciones"
+        
+        # 1. Crear carpeta si no existe
+        if not os.path.exists(folder_name):
+            try:
+                os.makedirs(folder_name)
+            except OSError as e:
+                messagebox.showerror("Error", f"No se pudo crear la carpeta: {e}")
+                return
+
+        # 2. Obtener nombre base del archivo CSV analizado
+        if self.loaded_filepath:
+            base_name = os.path.basename(self.loaded_filepath)
+            base_name = os.path.splitext(base_name)[0] # Quitar extensión .csv
+        else:
+            base_name = "datos_desconocidos"
+
+        # 3. Calcular el número del reporte
+        # Buscamos archivos que empiecen con "Reporte_No_" y contengan el nombre base
+        current_files = [f for f in os.listdir(folder_name) 
+                         if f.startswith("Reporte_No_") and base_name in f and f.endswith(".txt")]
+        
+        next_number = len(current_files) + 1
+        
+        # 4. Construir nombre final
+        filename = f"Reporte_No_{next_number}_{base_name}.txt"
+        full_path = os.path.join(folder_name, filename)
+
+        # 5. Guardar archivo
+        try:
+            with open(full_path, "w", encoding="utf-8") as f:
+                f.write(content)
+            
+            messagebox.showinfo("Informe Guardado", f"Se ha guardado el reporte exitosamente en:\n\n{full_path}")
+            
+            # Opcional: Abrir la carpeta automáticamente para el usuario
+            # os.startfile(folder_name) 
+            
+        except Exception as e:
+            messagebox.showerror("Error al guardar", f"No se pudo guardar el archivo:\n{e}")
+
+    def calcular_mejores_combinaciones(self, text_widget):
+        """
+        Lógica de fuerza bruta: Prueba combinaciones de k variables y encuentra
+        cuál grupo tiene la mayor varianza explicada en su primera componente.
+        """
+        text_widget.insert(tk.END, "Calculando... por favor espere.\n\n")
+        self.update_idletasks()
+
+        # 1. Obtener variables disponibles (las que están chequeadas en el sidebar)
+        selected_source_cols = []
+        for i, var in enumerate(self.column_vars):
+            if var.get():
+                selected_source_cols.append(self.all_column_names[i])
+
+        n_total = len(selected_source_cols)
+        
+        if n_total < 2:
+            text_widget.insert(tk.END, "Error: Necesitas seleccionar al menos 2 variables en el panel lateral para hacer combinaciones.")
+            return
+
+        # Limpiar datos base
+        try:
+            data_clean = self.data_raw[selected_source_cols].copy()
+            data_clean = data_clean.select_dtypes(include=[np.number]).dropna()
+        except Exception as e:
+            text_widget.insert(tk.END, f"Error en los datos: {e}")
+            return
+
+        text_widget.delete(1.0, tk.END)
+        text_widget.insert(tk.END, f"Analizando combinaciones posibles desde {n_total} variables base...\n")
+        text_widget.insert(tk.END, "-"*60 + "\n", 'info')
+
+        # 2. Bucle de 2 a 9 variables
+        max_k = min(9, n_total) # No podemos buscar 9 si solo tienes 5 variables
+        
+        for k in range(2, max_k + 1):
+            best_variance = -1.0
+            best_cols = None
+            
+            # Generar todas las combinaciones de tamaño k
+            # ADVERTENCIA: Si n_total es muy grande (>20), esto puede tardar.
+            combos = list(combinations(selected_source_cols, k))
+            
+            if len(combos) > 5000:
+                 text_widget.insert(tk.END, f"Salatando k={k} (demasiadas combinaciones: {len(combos)})...\n")
+                 continue
+
+            for cols in combos:
+                # Subconjunto de datos
+                sub_data = data_clean[list(cols)]
+                
+                # Estandarizar
+                scaler = StandardScaler()
+                sub_scaled = scaler.fit_transform(sub_data)
+                
+                # PCA (solo necesitamos ver la varianza del primer componente para evaluar "fuerza")
+                pca = PCA(n_components=1)
+                pca.fit(sub_scaled)
+                
+                var_ratio = pca.explained_variance_ratio_[0]
+                
+                if var_ratio > best_variance:
+                    best_variance = var_ratio
+                    best_cols = cols
+
+            # 3. Imprimir resultado para este k
+            if best_cols:
+                porcentaje = best_variance * 100
+                text_widget.insert(tk.END, f"\nMejores {k} Variables:\n", 'header')
+                text_widget.insert(tk.END, f"Retención (PC1): {porcentaje:.2f}%\n")
+                text_widget.insert(tk.END, f"Variables: {', '.join(best_cols)}\n", 'var_list')
+                text_widget.see(tk.END)
+                self.update_idletasks() # Mantiene la UI viva
+
+        text_widget.insert(tk.END, "\n" + "="*60 + "\nAnálisis Finalizado.")
 
 
 if __name__ == "__main__":
